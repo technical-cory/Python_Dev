@@ -74,6 +74,7 @@ def execute_command(device,command):
 with ThreadPoolExecutor(max_workers=10) as executor:
     results = [executor.submit(execute_command, device, "sh flash") for device in devices]
     for result in results:
+        net_connect = ConnectHandler(**device)
         version = re.search('(WB.16.10.00[0-9]{2})|(KB.16.10.00[0-9]{2})|(WC.16.10.00[0-9]{2})', result.result())
         if 'WB' in version.group(0):
             print('WB firmware found. Fetching current version - this may take some time.')
