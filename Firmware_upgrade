@@ -1,0 +1,100 @@
+from netmiko import ConnectHandler
+from concurrent.futures import ThreadPoolExecutor
+import getpass
+import re
+import time
+
+#global variables
+
+def credentials():
+    credential_choice = input('Use stored, read-only credentials or enter custom ones? (Stored/Custom):\n')
+    if credential_choice == "Stored" or credential_choice == "stored" or credential_choice == "s" or credential_choice == "S":
+        stored_credentials = {
+                  "username": "username",
+                  "password": "redacted",
+                  }
+        return(stored_credentials)
+    elif credential_choice == "Custom" or credential_choice == "custom" or credential_choice == "c" or credential_choice == "C":
+        stored_credentials = {
+                  "username": input("Enter username for future operations...\nUsername: "),
+                  "password": getpass.getpass()
+                  }
+        return(stored_credentials)
+ 
+chosen_credentials = credentials()
+#print(chosen_credentials)
+stored_username = chosen_credentials['username']
+stored_password = chosen_credentials['password']
+print("Chosen username:", stored_username)
+print("Chosen password: *************")
+
+#device dictionaries
+
+device1 =  {
+          "device_type": "aruba_osswitch",
+          "host": "device1",
+          "username": stored_username,
+          "password": stored_password,
+
+    }
+device2 =  {
+          "device_type": "aruba_osswitch",
+          "host": "device2",
+          "username": stored_username,
+          "password": stored_password,
+
+    }
+device3 =  {
+          "device_type": "aruba_osswitch",
+          "host": "device4",
+          "username": stored_username,
+          "password": stored_password,
+
+    }
+device5 =  {
+          "device_type": "aruba_osswitch",
+          "host": "device5",
+          "username": stored_username,
+          "password": stored_password,
+
+    }
+
+#lists 
+
+devices = [device1, device2, device3, device4, device5]
+
+
+
+def execute_command(device,command):
+    net_connect = ConnectHandler(**device)
+    output = net_connect.send_command(command)
+    net_connect.disconnect()
+    return output
+    
+with ThreadPoolExecutor(max_workers=10) as executor:
+    results = [executor.submit(execute_command, device, "sh flash") for device in devices]
+    for result in results:
+        version = re.search('(WB.16.10.00[0-9]{2})|(KB.16.10.00[0-9]{2})|(WC.16.10.00[0-9]{2})', result.result())
+        if 'WB' in version.group(0):
+            print('WB firmware found. Fetching current version - this may take some time.')
+            #net_connect.send_command_timing('copy tftp flash host /upgrades/WB_16_10_0025.swi')
+            #net_connect.send_command('y',read_timeout=1200)
+            #print('Firmware download finished.')
+            #post_download_flash = net_connect.send_command('sh fla')
+            #print(post_download_flash)
+        elif 'KB' in version.group(0):
+            print('KB firmware found. Fetching current version - this may take some time.')
+            #net_connect.send_command_timing('copy tftp flash host /upgrades/KB_16_11_0020.swi')
+            #net_connect.send_command('y',read_timeout=1200)
+            #print('Firmware download finished.')
+            #post_download_flash = net_connect.send_command('sh fla')
+            #print(post_download_flash)
+        elif 'WC' in version.group(0):
+            print('WC firmware found. Fetching current version - this may take some time.')
+            #net_connect.send_command_timing('copy tftp flash host /upgrades/WC_16_11_0020.swi')
+            #net_connect.send_command('y',read_timeout=1200)
+            #print('Firmware download finished.')
+            #post_download_flash = net_connect.send_command('sh fla')
+            #print(post_download_flash)
+        else:
+            print('Unknown firmware found:',version.group(0))
